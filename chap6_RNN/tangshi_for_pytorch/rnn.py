@@ -4,6 +4,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 import numpy as np
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def weights_init(m):
     classname = m.__class__.__name__  #   obtain the class name
@@ -14,7 +15,7 @@ def weights_init(m):
         w_bound = np.sqrt(6. / (fan_in + fan_out))
         m.weight.data.uniform_(-w_bound, w_bound)
         m.bias.data.fill_(0)
-        print("inital  linear weight ")
+        # print("inital  linear weight ")
 
 
 class word_embedding(nn.Module):
@@ -44,15 +45,16 @@ class RNN_model(nn.Module):
         #########################################
         # here you need to define the "self.rnn_lstm"  the input size is "embedding_dim" and the output size is "lstm_hidden_dim"
         # the lstm should have two layers, and the  input and output tensors are provided as (batch, seq, feature)
-        # ???
+        # ???我能在这里直接调库吗？
 
 
 
         ##########################################
+        self.rnn_lstm=torch.nn.LSTM(self.word_embedding_dim,self.lstm_dim,2,batch_first=True)
         self.fc = nn.Linear(lstm_hidden_dim, vocab_len )
         self.apply(weights_init) # call the weights initial function.
 
-        self.softmax = nn.LogSoftmax() # the activation function.
+        self.softmax = nn.LogSoftmax(dim=-1) # the activation function.
         # self.tanh = nn.Tanh()
     def forward(self,sentence,is_test = False):
         batch_input = self.word_embedding_lookup(sentence).view(1,-1,self.word_embedding_dim)
@@ -61,11 +63,18 @@ class RNN_model(nn.Module):
         # here you need to put the "batch_input"  input the self.lstm which is defined before.
         # the hidden output should be named as output, the initial hidden state and cell state set to zero.
         # ???
+        batchsize=batch_input.size(0)
+        h_0 = torch.zeros(2, batchsize, self.lstm_dim).to(batch_input.device)
+        c_0 = torch.zeros(2, batchsize, self.lstm_dim).to(batch_input.device)
 
+
+        output, _ = self.rnn_lstm(batch_input, (h_0, c_0))
 
 
 
         ################################################
+
+        
         out = output.contiguous().view(-1,self.lstm_dim)
 
         out =  F.relu(self.fc(out))

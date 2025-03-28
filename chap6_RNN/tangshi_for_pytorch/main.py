@@ -4,8 +4,10 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 
-import rnn
-
+import rnn as rnn_lstm
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
+# print(device)
 start_token = 'G'
 end_token = 'E'
 batch_size = 64
@@ -20,6 +22,7 @@ def process_poems1(file_name):
 
     """
     poems = []
+    file_name=r'C:\Users\suo\Desktop\大三下\神经网络与深度学习\exercise\chap6_RNN\tangshi_for_pytorch\poems.txt'
     with open(file_name, "r", encoding='utf-8', ) as f:
         for line in f.readlines():
             try:
@@ -34,7 +37,7 @@ def process_poems1(file_name):
                 content = start_token + content + end_token
                 poems.append(content)
             except ValueError as e:
-                print("error")
+                # print("error1")
                 pass
     # 按诗的字数排序
     poems = sorted(poems, key=lambda line: len(line))
@@ -129,7 +132,7 @@ def run_training():
 
     torch.manual_seed(5)
     word_embedding = rnn_lstm.word_embedding( vocab_length= len(word_to_int) + 1 , embedding_dim= 100)
-    rnn_model = rnn_lstm.RNN_model(batch_sz = BATCH_SIZE,vocab_len = len(word_to_int) + 1 ,word_embedding = word_embedding ,embedding_dim= 100, lstm_hidden_dim=128)
+    rnn_model = rnn_lstm.RNN_model(batch_sz = BATCH_SIZE,vocab_len = len(word_to_int) + 1 ,word_embedding = word_embedding ,embedding_dim= 100, lstm_hidden_dim=128).to(device)
 
     # optimizer = optim.Adam(rnn_model.parameters(), lr= 0.001)
     optimizer=optim.RMSprop(rnn_model.parameters(), lr=0.01)
@@ -148,8 +151,8 @@ def run_training():
             for index in range(BATCH_SIZE):
                 x = np.array(batch_x[index], dtype = np.int64)
                 y = np.array(batch_y[index], dtype = np.int64)
-                x = Variable(torch.from_numpy(np.expand_dims(x,axis=1)))
-                y = Variable(torch.from_numpy(y ))
+                x = Variable(torch.from_numpy(np.expand_dims(x,axis=1))).to(device)
+                y = Variable(torch.from_numpy(y )).to(device)
                 pre = rnn_model(x)
                 loss += loss_fun(pre , y)
                 if index == 0:
@@ -161,7 +164,7 @@ def run_training():
             print("epoch  ",epoch,'batch number',batch,"loss is: ", loss.data.tolist())
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm(rnn_model.parameters(), 1)
+            torch.nn.utils.clip_grad_norm_(rnn_model.parameters(), 1)
             optimizer.step()
 
             if batch % 20 ==0:
@@ -187,7 +190,7 @@ def pretty_print_poem(poem):  # 令打印的结果更工整
         shige.append(w)
     poem_sentences = poem.split('。')
     for s in poem_sentences:
-        if s != '' and len(s) > 10:
+        if s != '' :
             print(s + '。')
 
 
@@ -198,7 +201,7 @@ def gen_poem(begin_word):
     rnn_model = rnn_lstm.RNN_model(batch_sz=64, vocab_len=len(word_int_map) + 1, word_embedding=word_embedding,
                                    embedding_dim=100, lstm_hidden_dim=128)
 
-    rnn_model.load_state_dict(torch.load('./poem_generator_rnn'))
+    rnn_model.load_state_dict(torch.load(r'C:\Users\suo\Desktop\大三下\神经网络与深度学习\exercise\chap6_RNN\tangshi_for_pytorch\poem_generator_rnn'))
 
     # 指定开始的字
 
@@ -218,7 +221,7 @@ def gen_poem(begin_word):
 
 
 
-run_training()  # 如果不是训练阶段 ，请注销这一行 。 网络训练时间很长。
+# run_training()  # 如果不是训练阶段 ，请注销这一行 。 网络训练时间很长。
 
 
 pretty_print_poem(gen_poem("日"))
